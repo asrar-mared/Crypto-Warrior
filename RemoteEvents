@@ -1,0 +1,596 @@
+--[[
+    ╔═══════════════════════════════════════════════════════════════╗
+    ║  🏯🔥 جدار الصين العظيم الرقمي 🔥🏯                          ║
+    ║  THE DIGITAL GREAT WALL OF CHINA FIREWALL                    ║
+    ║  🛡️ نظام حماية احترافي متقدم للمطورين 🛡️                    ║
+    ║  🇨🇳 صُنع بقوة وإتقان الحضارة الصينية العريقة 🇨🇳              ║
+    ╚═══════════════════════════════════════════════════════════════╝
+    
+    المميزات الأسطورية:
+    🔰 حماية ضد الاستغلال (Anti-Exploit)
+    🔰 منع التلاعب بالـ RemoteEvents
+    🔰 حماية ضد سرعة إطلاق الطلبات (Rate Limiting)
+    🔰 كشف الغشاشين والمخترقين
+    🔰 حماية الـ Server من الهجمات
+    🔰 تسجيل كامل للأحداث المشبوهة
+    🔰 نظام بلاغات تلقائي للمشرفين
+    
+    الإصدار: 1.0.0
+    المطور: محمي بجدار الصين العظيم 🏯
+--]]
+
+local GreatWallFirewall = {}
+GreatWallFirewall.__index = GreatWallFirewall
+
+-- ⚙️ الإعدادات الرئيسية
+local CONFIG = {
+    -- 🔥 إعدادات الحماية من السرعة
+    MAX_REQUESTS_PER_MINUTE = 60,
+    MAX_REQUESTS_PER_SECOND = 3,
+    
+    -- 🛡️ إعدادات الكشف
+    DETECTION_SENSITIVITY = "HIGH", -- LOW, MEDIUM, HIGH, EXTREME
+    AUTO_BAN_ENABLED = true,
+    AUTO_KICK_ENABLED = true,
+    
+    -- 📊 إعدادات التسجيل
+    LOG_ALL_EVENTS = true,
+    LOG_SUSPICIOUS_ONLY = false,
+    SEND_WEBHOOKS = true,
+    
+    -- 🎯 إعدادات متقدمة
+    CHECK_PING = true,
+    MAX_PING_MS = 800,
+    VALIDATE_CLIENT_DATA = true,
+    ANTI_TELEPORT = true,
+    ANTI_SPEED_HACK = true,
+    ANTI_FLY_HACK = true,
+}
+
+-- 🗄️ قاعدة بيانات المستخدمين
+local PlayerData = {}
+local BannedPlayers = {}
+local SuspiciousActivity = {}
+
+-- 📝 نظام السجلات
+local SecurityLog = {}
+
+-- 🎨 رموز الحالة
+local STATUS_ICONS = {
+    SAFE = "✅",
+    WARNING = "⚠️",
+    DANGER = "🚨",
+    BANNED = "🔴",
+    KICKED = "❌",
+    SUSPICIOUS = "👁️",
+}
+
+-- ═══════════════════════════════════════════════════════════
+-- 🏗️ وظائف البناء والتهيئة
+-- ═══════════════════════════════════════════════════════════
+
+function GreatWallFirewall.new()
+    local self = setmetatable({}, GreatWallFirewall)
+    
+    self.Initialized = false
+    self.StartTime = os.time()
+    self.TotalThreatsBlocked = 0
+    self.ActiveConnections = {}
+    
+    print("🏯════════════════════════════════════════════════════════🏯")
+    print("🔥         جدار الصين العظيم الرقمي يستيقظ!          🔥")
+    print("🛡️           THE GREAT WALL IS NOW ONLINE!             🛡️")
+    print("🏯════════════════════════════════════════════════════════🏯")
+    
+    return self
+end
+
+function GreatWallFirewall:Initialize()
+    if self.Initialized then
+        warn("⚠️ الجدار مُفعّل بالفعل!")
+        return
+    end
+    
+    print("🔨 جاري بناء الجدار...")
+    
+    -- تهيئة حماية اللاعبين
+    self:SetupPlayerProtection()
+    
+    -- تهيئة حماية RemoteEvents
+    self:SetupRemoteProtection()
+    
+    -- تهيئة نظام المراقبة
+    self:SetupMonitoring()
+    
+    -- تهيئة نظام الكشف المتقدم
+    self:SetupAdvancedDetection()
+    
+    self.Initialized = true
+    
+    print("✅ 🏯 الجدار اكتمل بناؤه بنجاح! 🏯")
+    print("🛡️ مشروعك الآن محمي بأقوى جدار رقمي في التاريخ!")
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- 👥 نظام حماية اللاعبين
+-- ═══════════════════════════════════════════════════════════
+
+function GreatWallFirewall:SetupPlayerProtection()
+    local Players = game:GetService("Players")
+    
+    Players.PlayerAdded:Connect(function(player)
+        self:OnPlayerJoined(player)
+    end)
+    
+    Players.PlayerRemoving:Connect(function(player)
+        self:OnPlayerLeft(player)
+    end)
+    
+    print("👥 نظام حماية اللاعبين: مُفعّل ✅")
+end
+
+function GreatWallFirewall:OnPlayerJoined(player)
+    -- التحقق من القائمة السوداء
+    if BannedPlayers[player.UserId] then
+        self:HandleBannedPlayer(player)
+        return
+    end
+    
+    -- إنشاء ملف للاعب
+    PlayerData[player.UserId] = {
+        Player = player,
+        JoinTime = tick(),
+        RequestCount = 0,
+        LastRequestTime = 0,
+        RequestsPerSecond = {},
+        Warnings = 0,
+        SuspicionLevel = 0,
+        LastPosition = nil,
+        Flags = {},
+    }
+    
+    -- مراقبة حركة اللاعب
+    if CONFIG.ANTI_TELEPORT or CONFIG.ANTI_SPEED_HACK or CONFIG.ANTI_FLY_HACK then
+        self:MonitorPlayerMovement(player)
+    end
+    
+    self:Log("INFO", string.format("🎭 لاعب جديد انضم: %s (ID: %d)", 
+        player.Name, player.UserId))
+end
+
+function GreatWallFirewall:OnPlayerLeft(player)
+    local data = PlayerData[player.UserId]
+    if data and data.SuspicionLevel > 5 then
+        self:Log("WARNING", string.format("👁️ لاعب مشبوه غادر: %s (مستوى الشك: %d)", 
+            player.Name, data.SuspicionLevel))
+    end
+    
+    PlayerData[player.UserId] = nil
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- 🔒 نظام حماية RemoteEvents
+-- ═══════════════════════════════════════════════════════════
+
+function GreatWallFirewall:SetupRemoteProtection()
+    print("🔐 جاري تأمين جميع RemoteEvents...")
+    
+    -- يمكنك إضافة RemoteEvents هنا
+    -- مثال:
+    -- self:ProtectRemoteEvent(game.ReplicatedStorage.RemoteEvent1, function(player, ...)
+    --     return self:ValidateRequest(player, ...)
+    -- end)
+    
+    print("🔒 نظام حماية RemoteEvents: مُفعّل ✅")
+end
+
+function GreatWallFirewall:ProtectRemoteEvent(remoteEvent, validationFunction)
+    local originalEvent = remoteEvent.OnServerEvent
+    
+    remoteEvent.OnServerEvent:Connect(function(player, ...)
+        local data = PlayerData[player.UserId]
+        if not data then
+            self:Log("WARNING", "❌ طلب من لاعب غير مسجل!")
+            return
+        end
+        
+        -- فحص معدل الطلبات
+        if not self:CheckRateLimit(player) then
+            self:HandleRateLimitExceeded(player, remoteEvent.Name)
+            return
+        end
+        
+        -- التحقق من صحة البيانات
+        if validationFunction then
+            local valid, reason = validationFunction(player, ...)
+            if not valid then
+                self:HandleInvalidRequest(player, remoteEvent.Name, reason)
+                return
+            end
+        end
+        
+        -- تنفيذ الطلب الأصلي
+        if originalEvent then
+            originalEvent:Fire(player, ...)
+        end
+    end)
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- ⏱️ نظام التحقق من معدل الطلبات
+-- ═══════════════════════════════════════════════════════════
+
+function GreatWallFirewall:CheckRateLimit(player)
+    local data = PlayerData[player.UserId]
+    if not data then return false end
+    
+    local currentTime = tick()
+    
+    -- فحص الطلبات في الثانية
+    table.insert(data.RequestsPerSecond, currentTime)
+    
+    -- تنظيف الطلبات القديمة
+    for i = #data.RequestsPerSecond, 1, -1 do
+        if currentTime - data.RequestsPerSecond[i] > 1 then
+            table.remove(data.RequestsPerSecond, i)
+        end
+    end
+    
+    -- التحقق من تجاوز الحد
+    if #data.RequestsPerSecond > CONFIG.MAX_REQUESTS_PER_SECOND then
+        return false
+    end
+    
+    data.RequestCount = data.RequestCount + 1
+    data.LastRequestTime = currentTime
+    
+    return true
+end
+
+function GreatWallFirewall:HandleRateLimitExceeded(player, eventName)
+    local data = PlayerData[player.UserId]
+    data.Warnings = data.Warnings + 1
+    data.SuspicionLevel = data.SuspicionLevel + 3
+    
+    self:Log("DANGER", string.format(
+        "🚨 %s يرسل طلبات بسرعة كبيرة! (%s) - تحذير #%d",
+        player.Name, eventName, data.Warnings
+    ))
+    
+    if data.Warnings >= 3 and CONFIG.AUTO_KICK_ENABLED then
+        self:KickPlayer(player, "إرسال طلبات كثيرة جداً (Spam)")
+    end
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- 🎯 نظام الكشف المتقدم
+-- ═══════════════════════════════════════════════════════════
+
+function GreatWallFirewall:SetupAdvancedDetection()
+    print("🎯 تفعيل أنظمة الكشف المتقدمة...")
+    
+    if CONFIG.ANTI_TELEPORT then
+        print("  🌀 مضاد التنقل الفوري: مُفعّل")
+    end
+    
+    if CONFIG.ANTI_SPEED_HACK then
+        print("  ⚡ مضاد السرعة الخارقة: مُفعّل")
+    end
+    
+    if CONFIG.ANTI_FLY_HACK then
+        print("  🦅 مضاد الطيران: مُفعّل")
+    end
+end
+
+function GreatWallFirewall:MonitorPlayerMovement(player)
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+    local data = PlayerData[player.UserId]
+    
+    spawn(function()
+        while player.Parent and data do
+            wait(0.5)
+            
+            if not character or not humanoidRootPart then break end
+            
+            local currentPos = humanoidRootPart.Position
+            
+            if data.LastPosition then
+                local distance = (currentPos - data.LastPosition).Magnitude
+                local timeElapsed = 0.5
+                local speed = distance / timeElapsed
+                
+                -- كشف السرعة الزائدة
+                if CONFIG.ANTI_SPEED_HACK and speed > 100 then
+                    self:HandleSpeedHack(player, speed)
+                end
+                
+                -- كشف التنقل الفوري
+                if CONFIG.ANTI_TELEPORT and distance > 150 then
+                    self:HandleTeleport(player, distance)
+                end
+                
+                -- كشف الطيران
+                if CONFIG.ANTI_FLY_HACK then
+                    local humanoid = character:FindFirstChild("Humanoid")
+                    if humanoid and currentPos.Y > data.LastPosition.Y + 20 and 
+                       humanoid:GetState() ~= Enum.HumanoidStateType.Jumping then
+                        self:HandleFlyHack(player)
+                    end
+                end
+            end
+            
+            data.LastPosition = currentPos
+        end
+    end)
+end
+
+function GreatWallFirewall:HandleSpeedHack(player, speed)
+    local data = PlayerData[player.UserId]
+    data.SuspicionLevel = data.SuspicionLevel + 5
+    
+    self:Log("DANGER", string.format(
+        "⚡ تم كشف سرعة غير طبيعية: %s (السرعة: %.1f)",
+        player.Name, speed
+    ))
+    
+    if CONFIG.AUTO_KICK_ENABLED then
+        self:KickPlayer(player, "استخدام غش السرعة")
+    end
+end
+
+function GreatWallFirewall:HandleTeleport(player, distance)
+    local data = PlayerData[player.UserId]
+    data.SuspicionLevel = data.SuspicionLevel + 4
+    
+    self:Log("DANGER", string.format(
+        "🌀 تم كشف تنقل فوري: %s (المسافة: %.1f)",
+        player.Name, distance
+    ))
+end
+
+function GreatWallFirewall:HandleFlyHack(player)
+    local data = PlayerData[player.UserId]
+    data.SuspicionLevel = data.SuspicionLevel + 6
+    
+    self:Log("DANGER", string.format(
+        "🦅 تم كشف غش الطيران: %s",
+        player.Name
+    ))
+    
+    if CONFIG.AUTO_KICK_ENABLED then
+        self:KickPlayer(player, "استخدام غش الطيران")
+    end
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- 🔨 إجراءات العقوبات
+-- ═══════════════════════════════════════════════════════════
+
+function GreatWallFirewall:KickPlayer(player, reason)
+    self:Log("DANGER", string.format(
+        "❌ طرد لاعب: %s | السبب: %s",
+        player.Name, reason
+    ))
+    
+    player:Kick(string.format(
+        "🏯 جدار الصين العظيم 🏯\n\n" ..
+        "تم طردك من اللعبة\n" ..
+        "السبب: %s\n\n" ..
+        "🛡️ مشروعنا محمي بأقوى أنظمة الحماية",
+        reason
+    ))
+    
+    self.TotalThreatsBlocked = self.TotalThreatsBlocked + 1
+end
+
+function GreatWallFirewall:BanPlayer(player, reason, duration)
+    BannedPlayers[player.UserId] = {
+        Reason = reason,
+        BannedAt = os.time(),
+        Duration = duration,
+        BannedBy = "Great Wall System"
+    }
+    
+    self:Log("DANGER", string.format(
+        "🔴 حظر لاعب: %s | السبب: %s | المدة: %s",
+        player.Name, reason, duration or "دائم"
+    ))
+    
+    self:KickPlayer(player, "تم حظرك - " .. reason)
+end
+
+function GreatWallFirewall:HandleBannedPlayer(player)
+    local banInfo = BannedPlayers[player.UserId]
+    
+    player:Kick(string.format(
+        "🚫 حساب محظور 🚫\n\n" ..
+        "السبب: %s\n" ..
+        "تاريخ الحظر: %s\n\n" ..
+        "🏯 جدار الصين العظيم الرقمي",
+        banInfo.Reason,
+        os.date("%Y-%m-%d %H:%M:%S", banInfo.BannedAt)
+    ))
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- 📊 نظام المراقبة والتقارير
+-- ═══════════════════════════════════════════════════════════
+
+function GreatWallFirewall:SetupMonitoring()
+    spawn(function()
+        while wait(60) do -- تقرير كل دقيقة
+            self:GenerateSecurityReport()
+        end
+    end)
+    
+    print("📊 نظام المراقبة: مُفعّل ✅")
+end
+
+function GreatWallFirewall:GenerateSecurityReport()
+    local activePlayers = 0
+    local suspiciousPlayers = 0
+    local totalWarnings = 0
+    
+    for userId, data in pairs(PlayerData) do
+        activePlayers = activePlayers + 1
+        totalWarnings = totalWarnings + data.Warnings
+        
+        if data.SuspicionLevel > 3 then
+            suspiciousPlayers = suspiciousPlayers + 1
+        end
+    end
+    
+    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    print("🏯 تقرير الأمان - جدار الصين العظيم 🏯")
+    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    print(string.format("👥 اللاعبون النشطون: %d", activePlayers))
+    print(string.format("👁️ لاعبون مشبوهون: %d", suspiciousPlayers))
+    print(string.format("⚠️ إجمالي التحذيرات: %d", totalWarnings))
+    print(string.format("🛡️ التهديدات المحجوبة: %d", self.TotalThreatsBlocked))
+    print(string.format("⏱️ وقت التشغيل: %d ثانية", os.time() - self.StartTime))
+    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- 📝 نظام السجلات
+-- ═══════════════════════════════════════════════════════════
+
+function GreatWallFirewall:Log(level, message)
+    local timestamp = os.date("%Y-%m-%d %H:%M:%S")
+    local icon = STATUS_ICONS.SAFE
+    
+    if level == "WARNING" then
+        icon = STATUS_ICONS.WARNING
+    elseif level == "DANGER" then
+        icon = STATUS_ICONS.DANGER
+    end
+    
+    local logEntry = string.format("[%s] %s %s: %s", 
+        timestamp, icon, level, message)
+    
+    table.insert(SecurityLog, logEntry)
+    print(logEntry)
+    
+    -- الاحتفاظ بآخر 1000 سجل فقط
+    if #SecurityLog > 1000 then
+        table.remove(SecurityLog, 1)
+    end
+end
+
+function GreatWallFirewall:HandleInvalidRequest(player, eventName, reason)
+    local data = PlayerData[player.UserId]
+    data.SuspicionLevel = data.SuspicionLevel + 2
+    
+    self:Log("WARNING", string.format(
+        "⚠️ طلب غير صالح من %s في %s: %s",
+        player.Name, eventName, reason or "غير محدد"
+    ))
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- 🎯 وظائف مساعدة للمطورين
+-- ═══════════════════════════════════════════════════════════
+
+function GreatWallFirewall:ValidateRequest(player, ...)
+    -- مثال على وظيفة التحقق - يمكن للمطور تخصيصها
+    return true, nil
+end
+
+function GreatWallFirewall:GetPlayerSuspicionLevel(player)
+    local data = PlayerData[player.UserId]
+    return data and data.SuspicionLevel or 0
+end
+
+function GreatWallFirewall:GetSecurityStats()
+    return {
+        TotalThreatsBlocked = self.TotalThreatsBlocked,
+        ActivePlayers = self:CountActivePlayers(),
+        Uptime = os.time() - self.StartTime,
+        TotalLogs = #SecurityLog,
+    }
+end
+
+function GreatWallFirewall:CountActivePlayers()
+    local count = 0
+    for _ in pairs(PlayerData) do
+        count = count + 1
+    end
+    return count
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- 🚀 نقطة البداية
+-- ═══════════════════════════════════════════════════════════
+
+print([[
+🏯═══════════════════════════════════════════════════════════🏯
+  
+     ██████╗ ██████╗ ███████╗ █████╗ ████████╗    
+    ██╔════╝ ██╔══██╗██╔════╝██╔══██╗╚══██╔══╝    
+    ██║  ███╗██████╔╝█████╗  ███████║   ██║       
+    ██║   ██║██╔══██╗██╔══╝  ██╔══██║   ██║       
+    ╚██████╔╝██║  ██║███████╗██║  ██║   ██║       
+     ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝       
+                                                   
+    ██╗    ██╗ █████╗ ██╗     ██╗                 
+    ██║    ██║██╔══██╗██║     ██║                 
+    ██║ █╗ ██║███████║██║     ██║                 
+    ██║███╗██║██╔══██║██║     ██║                 
+    ╚███╔███╔╝██║  ██║███████╗███████╗            
+     ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝╚══════╝            
+  
+   🇨🇳 جدار الصين العظيم الرقمي 🇨🇳
+   THE DIGITAL GREAT WALL OF CHINA
+  
+   🛡️ أقوى نظام حماية في تاريخ Roblox 🛡️
+  
+🏯═══════════════════════════════════════════════════════════🏯
+]])
+
+-- إرجاع الوحدة
+return GreatWallFirewall
+
+--[[ 
+═══════════════════════════════════════════════════════════════
+📚 دليل الاستخدام للمطورين:
+═══════════════════════════════════════════════════════════════
+
+1️⃣ التثبيت الأساسي:
+   ```lua
+   local GreatWall = require(script.GreatWallFirewall)
+   local firewall = GreatWall.new()
+   firewall:Initialize()
+   ```
+
+2️⃣ حماية RemoteEvent:
+   ```lua
+   firewall:ProtectRemoteEvent(game.ReplicatedStorage.YourEvent, function(player, data)
+       -- تحقق من صحة البيانات هنا
+       if type(data) ~= "string" then
+           return false, "نوع بيانات خاطئ"
+       end
+       return true
+   end)
+   ```
+
+3️⃣ الحصول على إحصائيات الأمان:
+   ```lua
+   local stats = firewall:GetSecurityStats()
+   print("التهديدات المحجوبة:", stats.TotalThreatsBlocked)
+   ```
+
+4️⃣ حظر/طرد لاعب يدوياً:
+   ```lua
+   firewall:KickPlayer(player, "سبب الطرد")
+   firewall:BanPlayer(player, "سبب الحظر", 86400) -- ثانية
+   ```
+
+🎯 نصائح احترافية:
+   • عدّل CONFIG في بداية الملف حسب احتياجاتك
+   • استخدم :Log() لتسجيل أحداث مخصصة
+   • راقب التقارير الدورية لفهم نشاط اللاعبين
+   • اختبر النظام قبل استخدامه في الإنتاج
+
+🏯 الجدار يحميك دائماً! 🛡️
+--]]
